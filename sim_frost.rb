@@ -4,41 +4,51 @@
 
 require 'colorize'
 # can make this more elegant with procs mb - colorize colors method in hash
-ROWS = 50
-COLS = 50
-STATES = %i[vacuum vapor frost].freeze
-STATE_COLORS = { vacuum: ' ', vapor: '"', frost: '*' }.freeze
+ROWS = 40
+COLS = 40
+STATES = %i[vacuum vapor frost]
+STATE_COLORS = { vacuum: ' ', vapor: '"', frost: '*' }
 INTERVAL = 1
 TEST_GRID = []
 4.times do |i|
-  TEST_GRID << (1..4).map { |a| a + (i*4)}
+  TEST_GRID << (1..4).map { |a| a + (i * 4) }
 end
 
 class Frost
   attr_accessor :grid, :delay
 
-  def initialize(delay=0)
-
+  def initialize(delay = 0, vapor_ratio = 0.5)
     @delay = delay
+    @delay = ARGV[0].to_i if ARGV[0]
+    @vapor_ratio = vapor_ratio
+    @vapor_ratio = ARGV[1].to_f if ARGV[1]
     @grid = Array.new(ROWS) { Array.new(COLS) }
     @grid.each_index do |i|
       @grid[i].each_index do |j|
-        r = rand(2) # =>
-        @grid[i][j] = STATES[r]
+        r = rand # =>
+        @grid[i][j] = if r < @vapor_ratio
+                        :vapor
+                      else
+                        :vacuum
+                      end
       end
     end
     # p @grid
 
     @grid[ROWS / 2][COLS / 2] = :frost
 
-    print "\n"*ROWS
+    print "\n" * ROWS
     draw(@grid)
     start
   end
+
   def start
-    50.times do |i|
-        iterate(i % 2)
+    i = 0
+    while @grid.flatten.include?(:vapor) do
+      iterate(i % 2)
+      i += 1
     end
+    puts "#{i} iterations needed!".light_blue
   end
 
   def iterate(offset)
@@ -47,7 +57,7 @@ class Frost
     (ROWS / 2).times do |x|
       x *= 2
       x += offset
-      (ROWS / 2).times do |y|
+      (COLS / 2).times do |y|
         y *= 2
         y += offset
         nx = if x + 1 >= ROWS
@@ -55,7 +65,7 @@ class Frost
              else
                x + 1
              end
-        ny = if y + 1 >= ROWS
+        ny = if y + 1 >= COLS
                0
              else
                y + 1
@@ -67,7 +77,6 @@ class Frost
         @grid[x][ny] = cell[0][1]
         @grid[nx][y] = cell[1][0]
         @grid[nx][ny] = cell[1][1]
-  
       end
     end
     sleep @delay
@@ -75,7 +84,7 @@ class Frost
   end
 
   def manipulate_cell(cell)
-    #puts "just before rotate #{cell.inspect}".green
+    # puts "just before rotate #{cell.inspect}".green
     # draw(cell)
     if cell.flatten.include?(:frost)
       2.times do |x|
@@ -85,16 +94,17 @@ class Frost
       end
       cell
     else
-      rand(2) == 0 ? cell.transpose.rotate :  cell.rotate.transpose
+      rand(2) == 0 ? cell.transpose.rotate : cell.rotate.transpose
     end
     # chance of icing vapor
     # chance of rotating each way(50% each)
   end
+
   def draw(array)
-    #move up ROWS lines
+    # move up ROWS lines
     print "\e[#{ROWS}F"
     array.length.times do |x|
-      array.length.times do |y|
+      array[0].length.times do |y|
         if array[x][y] == :vacuum
           print ' '.on_black
         elsif array[x][y] == :vapor
@@ -107,7 +117,5 @@ class Frost
       puts
     end
   end
-
 end
-delay = ARGV[0].to_i
-f = Frost.new(delay)
+Frost.new

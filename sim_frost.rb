@@ -4,20 +4,22 @@
 
 require 'colorize'
 # can make this more elegant with procs mb - colorize colors method in hash
-ROWS = 8
-COLS = 8
+ROWS = 50
+COLS = 50
 STATES = %i[vacuum vapor frost].freeze
 STATE_COLORS = { vacuum: ' ', vapor: '"', frost: '*' }.freeze
-INTERVAL = 0.2
+INTERVAL = 1
 TEST_GRID = []
 4.times do |i|
   TEST_GRID << (1..4).map { |a| a + (i*4)}
 end
 
 class Frost
-  attr_accessor :grid
+  attr_accessor :grid, :delay
 
-  def initialize
+  def initialize(delay=0)
+
+    @delay = delay
     @grid = Array.new(ROWS) { Array.new(COLS) }
     @grid.each_index do |i|
       @grid[i].each_index do |j|
@@ -34,35 +36,41 @@ class Frost
     start
   end
   def start
-    10.times do 
-
-      start_time
+    50.times do |i|
+        iterate(i % 2)
     end
   end
 
-  def start_time
+  def iterate(offset)
     cell = []
     # divide into cells
-    offset = 0
     (ROWS / 2).times do |x|
       x *= 2
+      x += offset
       (ROWS / 2).times do |y|
         y *= 2
-        x = -1 if x >= ROWS
-        y = -1 if y >= ROWS  # => 
+        y += offset
+        nx = if x + 1 >= ROWS
+               0
+             else
+               x + 1
+             end
+        ny = if y + 1 >= ROWS
+               0
+             else
+               y + 1
+             end
 
-        cell = [[@grid[x][y], @grid[x][y + 1]], [@grid[x + 1][y], @grid[x + 1][y + 1]]]
+        cell = [[@grid[x][y], @grid[x][ny]], [@grid[nx][y], @grid[nx][ny]]]
         cell = manipulate_cell(cell)
         @grid[x][y] = cell[0][0]
-        @grid[x][y + 1] = cell[0][1]
-        @grid[x + 1][y] = cell[1][0]
-        @grid[x + 1][y + 1]= cell[1][1]
+        @grid[x][ny] = cell[0][1]
+        @grid[nx][y] = cell[1][0]
+        @grid[nx][ny] = cell[1][1]
   
-        # now need to put cell into grid
       end
-      sleep 0.01
     end
-    sleep INTERVAL
+    sleep @delay
     draw(@grid)
   end
 
@@ -101,4 +109,5 @@ class Frost
   end
 
 end
-f = Frost.new
+delay = ARGV[0].to_i
+f = Frost.new(delay)
